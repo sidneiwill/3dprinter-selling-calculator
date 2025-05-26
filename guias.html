@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Custo de Impressão 3D em Resina (Vue.js)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <style>
+        /* Define a fonte Inter para todo o corpo, com fallback */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilos para o input range para melhor visualização */
+        input[type="range"] {
+            -webkit-appearance: none; /* Remove o estilo padrão do navegador */
+            width: 100%; /* Largura total */
+            height: 8px; /* Altura da barra */
+            background: #d1d5db; /* Cor de fundo da barra */
+            outline: none; /* Remove a borda de foco */
+            opacity: 0.7; /* Transparência */
+            -webkit-transition: .2s; /* Transição suave */
+            transition: opacity .2s;
+            border-radius: 4px; /* Cantos arredondados */
+        }
+
+        input[type="range"]:hover {
+            opacity: 1; /* Aumenta a opacidade ao passar o mouse */
+        }
+
+        /* Estilo do polegar (handle) do input range */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; /* Remove o estilo padrão */
+            appearance: none;
+            width: 20px; /* Largura do polegar */
+            height: 20px; /* Altura do polegar */
+            background: #3b82f6; /* Cor do polegar (azul Tailwind) */
+            cursor: pointer; /* Cursor de ponteiro */
+            border-radius: 50%; /* Formato circular */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Sombra */
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div id="app" class="bg-white p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-md lg:max-w-lg">
+        <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6">
+            Calculadora de Custo de Impressão 3D em Resina
+        </h1>
+
+        <div class="space-y-4 mb-6">
+            <div>
+                <label for="resinPrice" class="block text-gray-700 text-sm font-semibold mb-2">
+                    Valor da Resina por Litro (R$)
+                </label>
+                <input type="number" id="resinPrice" v-model.number="resinPrice" step="0.01"
+                       class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"
+                       placeholder="Ex: 350.00">
+            </div>
+
+            <div>
+                <label for="resinVolume" class="block text-gray-700 text-sm font-semibold mb-2">
+                    Volume de Resina (ml)
+                </label>
+                <input type="number" id="resinVolume" v-model.number="resinVolume" step="0.1"
+                       class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"
+                       placeholder="Ex: 15">
+            </div>
+
+            <div>
+                <label for="printTime" class="block text-gray-700 text-sm font-semibold mb-2">
+                    Tempo de Impressão (horas)
+                </label>
+                <input type="number" id="printTime" v-model.number="printTime" step="0.1"
+                       class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"
+                       placeholder="Ex: 2.5">
+            </div>
+
+            <div>
+                <label for="energyRate" class="block text-gray-700 text-sm font-semibold mb-2">
+                    Taxa de Energia por kWh (R$)
+                </label>
+                <input type="number" id="energyRate" v-model.number="energyRate" step="0.01"
+                       class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"
+                       placeholder="Ex: 0.80">
+            </div>
+
+            <div>
+                <label for="printerPower" class="block text-gray-700 text-sm font-semibold mb-2">
+                    Potência da Impressora (W)
+                    <span id="printerPowerValue" class="text-blue-600 font-normal ml-2">{{ printerPower }} W</span>
+                </label>
+                <input type="range" id="printerPower" v-model.number="printerPower" min="1" max="500" step="1"
+                       class="w-full">
+            </div>
+
+            <div>
+                <label for="profitPercentage" class="block text-gray-700 text-sm font-semibold mb-2">
+                    Percentual de Lucro sobre o Custo (%)
+                </label>
+                <input type="number" id="profitPercentage" v-model.number="profitPercentage" step="1" min="0"
+                       class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out"
+                       placeholder="Ex: 50">
+            </div>
+        </div>
+
+        <button @click="calculateCosts"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-lg">
+            Calcular Custo
+        </button>
+
+        <div class="mt-8 space-y-3 text-gray-800">
+            <div class="flex justify-between items-center bg-blue-50 p-4 rounded-md">
+                <span class="font-semibold text-blue-800">Custo da Resina por Peça:</span>
+                <span id="resinCostResult" class="text-blue-800 font-bold text-lg">{{ formatCurrency(resinCostResult) }}</span>
+            </div>
+            <div class="flex justify-between items-center bg-blue-50 p-4 rounded-md">
+                <span class="font-semibold text-blue-800">Custo de Energia por Peça:</span>
+                <span id="energyCostResult" class="text-blue-800 font-bold text-lg">{{ formatCurrency(energyCostResult) }}</span>
+            </div>
+            <div class="flex justify-between items-center bg-blue-100 p-4 rounded-md shadow-inner">
+                <span class="font-bold text-blue-900 text-xl">Custo Total por Peça:</span>
+                <span id="totalCostResult" class="text-blue-900 font-extrabold text-2xl">{{ formatCurrency(totalCostResult) }}</span>
+            </div>
+            <div class="flex justify-between items-center bg-purple-100 p-4 rounded-md shadow-inner">
+                <span class="font-bold text-purple-900 text-xl">Preço de Venda Sugerido:</span>
+                <span id="suggestedSellingPriceResult" class="text-purple-900 font-extrabold text-2xl">{{ formatCurrency(suggestedSellingPrice) }}</span>
+            </div>
+        </div>
+
+        <div id="messageBox" :class="['mt-6 p-3 rounded-md', messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700', { 'hidden': !showMessageBox }]">
+            {{ messageText }}
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app', // Monta o aplicativo Vue no div com id="app"
+            data: {
+                // Dados de entrada com valores padrão
+                resinPrice: 350.00,
+                resinVolume: 15,
+                printTime: 2.5,
+                energyRate: 0.80,
+                printerPower: 80, // Em Watts
+                profitPercentage: 50, // NOVO: Percentual de lucro sobre o custo
+
+                // Resultados dos cálculos
+                resinCostResult: 0.00,
+                energyCostResult: 0.00,
+                totalCostResult: 0.00,
+                suggestedSellingPrice: 0.00, // NOVO: Preço de venda sugerido
+
+                // Propriedades para a caixa de mensagem
+                messageText: '',
+                messageType: 'error', // 'error' ou 'success'
+                showMessageBox: false
+            },
+            methods: {
+                // Função para exibir mensagens na caixa de mensagem
+                showMessage(message, type = 'error') {
+                    this.messageText = message;
+                    this.messageType = type;
+                    this.showMessageBox = true;
+                },
+                // Função para ocultar a caixa de mensagem
+                hideMessage() {
+                    this.showMessageBox = false;
+                    this.messageText = '';
+                },
+                // Função para formatar valores como moeda brasileira
+                formatCurrency(value) {
+                    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+                },
+                // Função principal para calcular os custos
+                calculateCosts() {
+                    this.hideMessage(); // Oculta qualquer mensagem anterior
+
+                    // Validação dos inputs
+                    if (isNaN(this.resinPrice) || isNaN(this.resinVolume) || isNaN(this.printTime) || isNaN(this.energyRate) || isNaN(this.printerPower) || isNaN(this.profitPercentage) ||
+                        this.resinPrice < 0 || this.resinVolume < 0 || this.printTime < 0 || this.energyRate < 0 || this.printerPower <= 0 || this.profitPercentage < 0) {
+                        this.showMessage("Por favor, insira valores numéricos válidos e positivos em todos os campos. A potência da impressora e o percentual de lucro devem ser maiores que zero ou iguais a zero para o lucro.");
+                        // Limpa os resultados se houver erro
+                        this.resinCostResult = 0.00;
+                        this.energyCostResult = 0.00;
+                        this.totalCostResult = 0.00;
+                        this.suggestedSellingPrice = 0.00; // Limpa também o novo resultado
+                        return;
+                    }
+
+                    // Cálculos
+                    const resinCost = (this.resinVolume / 1000) * this.resinPrice;
+                    // Custo da energia: Tempo (horas) * Taxa de energia (R$/kWh) * (Potência da impressora em W / 1000 para converter para kW)
+                    const energyCost = this.printTime * this.energyRate * (this.printerPower / 1000);
+                    const totalCost = resinCost + energyCost;
+
+                    // Cálculo do Preço de Venda Sugerido (com base no percentual de lucro sobre o custo)
+                    const suggestedSellingPrice = totalCost * (1 + (this.profitPercentage / 100));
+
+                    // Atualiza as propriedades de dados com os resultados
+                    this.resinCostResult = resinCost;
+                    this.energyCostResult = energyCost;
+                    this.totalCostResult = totalCost;
+                    this.suggestedSellingPrice = suggestedSellingPrice; // Atualiza o novo resultado
+
+                    this.showMessage("Cálculo realizado com sucesso!", "success");
+                }
+            },
+            mounted() {
+                // Chama a função de cálculo uma vez ao carregar a página para exibir os valores iniciais
+                this.calculateCosts();
+            }
+        });
+    </script>
+</body>
+</html>
